@@ -27,18 +27,28 @@ function App() {
 
     try {
       setLoading(true);
+
       const response = await axios.post(`${backendUrl}/upload-pdf`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
-      setUploadMessage(response.data.message);
+      setUploadMessage(
+        `${response.data.message} | Pages: ${response.data.total_pages} | Chunks: ${response.data.total_chunks}`
+      );
       setAnswer("");
       setCitations([]);
     } catch (error) {
       console.error(error);
-      setUploadMessage("Error uploading PDF.");
+
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.error ||
+        error.message ||
+        "Error uploading PDF.";
+
+      setUploadMessage(`Error uploading PDF: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -51,15 +61,29 @@ function App() {
 
     try {
       setLoading(true);
+
       const response = await axios.get(`${backendUrl}/ask`, {
         params: { query },
       });
+
+      if (response.data.error) {
+        setAnswer(response.data.error);
+        setCitations([]);
+        return;
+      }
 
       setAnswer(response.data.answer || "");
       setCitations(response.data.citations || []);
     } catch (error) {
       console.error(error);
-      setAnswer("Error getting answer.");
+
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.error ||
+        error.message ||
+        "Error getting answer.";
+
+      setAnswer(errorMessage);
       setCitations([]);
     } finally {
       setLoading(false);
@@ -72,25 +96,30 @@ function App() {
 
       <div className="card">
         <h2>Upload PDF</h2>
+
         <input
           type="file"
           accept="application/pdf"
           onChange={handleFileChange}
         />
+
         <button onClick={handleUpload} disabled={loading}>
           {loading ? "Processing..." : "Upload PDF"}
         </button>
+
         {uploadMessage && <p className="message">{uploadMessage}</p>}
       </div>
 
       <div className="card">
         <h2>Ask a Question</h2>
+
         <textarea
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask something from the uploaded textbook..."
           rows="4"
         />
+
         <button onClick={handleAsk} disabled={loading}>
           {loading ? "Thinking..." : "Ask"}
         </button>
@@ -98,6 +127,7 @@ function App() {
 
       <div className="card">
         <h2>Answer</h2>
+
         {answer ? <p>{answer}</p> : <p>No answer yet.</p>}
 
         {citations.length > 0 && (
